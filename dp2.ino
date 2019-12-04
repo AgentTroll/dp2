@@ -46,9 +46,9 @@ const int LIGHT_PINS[] = {7, 8};
 
 const int SPEAKER_PIN = A1;
 const int BUTTON_PIN = 6;
-const int LED_PINS[] = {5, 4, 3, 2};
 
 const int I2C_PORTS[] = {0, 1, 2, 3};
+const rgb_t LED_PINS[] = {{}, {}, {3, 5, 4}, {A3, A4, A5}};
 
 // ----------------- RGB controllers ------------------
 SparkFun_APDS9960 APDS = SparkFun_APDS9960();
@@ -87,13 +87,13 @@ void debug_rgb(rgb_t rgb) {
 
 // -------------- RGB sensor wrappers --------------
 bool read_rgb(int port, rgb_t rgb) {
-    /* I2C_MULTI.selectPort(port);
+    I2C_MULTI.selectPort(port);
     if (!APDS.readRedLight(rgb.r) ||
         !APDS.readGreenLight(rgb.g) ||
         !APDS.readBlueLight(rgb.b)) {
         Serial.println("Error reading light values");
         return false;
-    } */
+    }
 
     return true;
 }
@@ -120,8 +120,28 @@ color_t decode_color(rgb_t rgb) {
     return NONE;
 }
 
+void write_rgb(rgb_t pins, int r, int g, int b) {
+    digitalWrite(pins.r, r > 0 ? HIGH : LOW);
+    digitalWrite(pins.g, g > 0 ? HIGH : LOW);
+    digitalWrite(pins.b, b > 0 ? HIGH : LOW);
+}
+
 void write_color(int idx, color_t color) {
-    // TODO: Set RGB color at the given index
+    rgb_t pins = LED_PINS[idx];
+    switch (color) {
+        case RED:
+            write_rgb(pins, 255, 0, 0);
+            break;
+        case GREEN:
+            write_rgb(pins, 0, 255, 0);
+            break;
+        case BLUE:
+            write_rgb(pins, 0, 0, 255);
+            break;
+        case NONE:
+            write_rgb(pins, 0, 0, 0);
+            break;
+    }
 }
 
 // ------------ State helper functions -------------
@@ -201,21 +221,31 @@ void reset_game() {
 
 // ------------- Round begin/end functions ---------------
 void play_begin_round_tone() {
-    /* tone(SPEAKER_PIN, 4000, 500); */
+    tone(SPEAKER_PIN, 4000, 500);
     Serial.println("START");
 }
 
 void play_correct_tone() {
-    /* tone(SPEAKER_PIN, 4000, 500);
+    tone(SPEAKER_PIN, 4000, 500);
     delay(200);
-    tone(SPEAKER_PIN, 4500, 500); */
+    tone(SPEAKER_PIN, 4500, 500);
+
+    for (int i = 0; i < GAME_DIVISIONS; ++i) {
+        write_color(i, GREEN);
+    }
+    
     Serial.println("CORRECT");
 }
 
 void play_incorrect_tone() {
-    /* tone(SPEAKER_PIN, 1000, 1000);
+    tone(SPEAKER_PIN, 1000, 1000);
     delay(200);
-    tone(SPEAKER_PIN, 1000, 500); */
+    tone(SPEAKER_PIN, 1000, 500);
+
+    for (int i = 0; i < GAME_DIVISIONS; ++i) {
+        write_color(i, GREEN);
+    }
+    
     Serial.println("INCORRECT");
 }
 
@@ -225,10 +255,25 @@ void setup() {
     
     pinMode(SPEAKER_PIN, OUTPUT);
     pinMode(BUTTON_PIN, INPUT);
-    for (int pin : LED_PINS) {
-        pinMode(pin, OUTPUT);
+
+    for (int i = 0; i < GAME_DIVISIONS; ++i) {
+        rgb_t pins = LED_PINS[i];
+        pinMode(pins.r, OUTPUT);
+        pinMode(pins.g, OUTPUT);
+        pinMode(pins.b, OUTPUT);
     }
 
+    // write_color(0, NONE);
+    // write_color(1, NONE);
+    write_color(2, BLUE);
+    // write_color(3, RED);
+
+    analogWrite(A3, 0);
+    analogWrite(A4, 255);
+    analogWrite(A5, 0);
+
+    Serial.println("Debug");
+      
     // Turn on the light LEDs
     for (int pin : LIGHT_PINS) {
         pinMode(pin, OUTPUT);
